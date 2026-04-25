@@ -1,0 +1,39 @@
+#
+take_out   = "SELECT card_name, card_text, card_path FROM tarot_content "
+tarot_text = database_manager.fetch_data(take_out, params = ())
+#
+
+#
+take_out = "SELECT role, text FROM history WHERE user_id = ? AND group_id = ?"
+params   = (user_id, group_id)
+take_out = "SELECT role, text FROM history WHERE user_id = ? AND group_id IS NULL"
+params   = (user_id,)
+#
+
+#
+take_out = "SELECT card_name, timestamp FROM tarot_history WHERE user_id = ?"
+user_id  = msg_obj.user_id
+tarot_history = database_manager.fetch_data(take_out, (user_id, ))
+#
+
+#
+deposit_action = "INSERT INTO tarot_history (user_id, card_name) VALUES (?, ?)"
+deposit_cotent = (msg_obj.user_id, msg_obj.card_name)
+database_manager.execute_action(deposit_action, deposit_cotent)   
+
+deposit_action = "INSERT INTO history (role, user_id, group_id, text) VALUES (?, ?, ?, ?)"
+msg_role = "user"
+msg_text = (msg_role, msg_obj.user_id, msg_obj.group_id, msg_obj.msg)
+database_manager.execute_action(deposit_action, msg_text)
+
+ai_response_role = ai_data_obj.deposite_text['role']
+ai_response_text = ai_data_obj.deposite_text['content']
+ai_text          = (ai_response_role, msg_obj.user_id, msg_obj.group_id, ai_response_text)
+database_manager.execute_action(deposit_action, ai_text)
+#
+
+#
+deposit_action = "INSERT INTO history (role, user_id, group_id, text) VALUES (?, ?, ?, ?)"
+msg_role       = "user"
+#
+            
