@@ -4,6 +4,7 @@ from ai       import AiServer
 from robot    import RobotServer
 from config   import Config
 import random
+import threading
    
 app              = Flask(__name__)
 database_manager = DatabaseManager()
@@ -21,12 +22,7 @@ def tarot(msg_obj):
     msg_obj.msg_text  = {"type": "text", "data": {"text": f"这是你的塔罗牌: \n{msg_obj.card_name}\n{msg_obj.card_text}\n"}}
     return None
 
-@app.route('/',methods = ['POST'])
-def receive():
-    msg_data = request.json
-    if not msg_data:
-        return "nodata"
-    robot_server = RobotServer(msg_data)    
+def main_logic(robot_server):
     if (robot_server.msg_type == "group" and robot_server.at_judgement) or robot_server.msg_type == "private":
         user_id  = robot_server.user_id
         group_id = robot_server.group_id
@@ -85,8 +81,16 @@ def receive():
             database_manager.deposit("history", "(role, user_id, group_id, text)", "(?, ?, ?, ?)", (airesponse_role, robot_server.user_id, robot_server.group_id, airesponse_text))
     else:
         print("无关消息")
-    return "ok"
+
+@app.route('/',methods = ['POST'])
+def receive():
+    msg_data = request.json
+    if not msg_data:
+        return "nodata"
+    robot_server = RobotServer(msg_data)
+    task = threading.Thread(target = main_logic, args = (robot_server,))
+    task.start()
+    return "Success"    
 
 if __name__ == '__main__':
     app.run(host = '0.0.0.0',port = 5000) 
-    
