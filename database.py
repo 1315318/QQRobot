@@ -30,7 +30,6 @@ class DatabaseManager:
                             tarot_content(
                             id        INTEGER PRIMARY KEY AUTOINCREMENT,
                             card_name TEXT NOT NULL,
-                            card_text TEXT NOT NULL,
                             card_path TEXT NOT NULL
                             )''')
     

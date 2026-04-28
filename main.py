@@ -10,16 +10,15 @@ app              = Flask(__name__)
 database_manager = DatabaseManager()
 
 def tarot(msg_obj):
-    tarot_text = database_manager.takeout("tarot_content", "card_name, card_text, card_path")
+    tarot_text = database_manager.takeout("tarot_content", "card_name, card_path")
     tarot_list = []
-    tarot_list.extend([{"card_name": card_name, "card_text": card_text, "card_path": card_path} for card_name, card_text, card_path in tarot_text])
+    tarot_list.extend([{"card_name": card_name,"card_path": card_path} for card_name, card_path in tarot_text])
     result_tarot = random.choice(tarot_list)
     msg_obj.card_name = result_tarot["card_name"]
-    msg_obj.card_text = result_tarot["card_text"]
     msg_obj.card_path = result_tarot["card_path"]           
     msg_obj.msg_file  = {"type": "image", "data": {"file": msg_obj.card_path}}
     msg_obj.msg_at    = {"type": "at", "data": {"qq": msg_obj.user_id}}
-    msg_obj.msg_text  = {"type": "text", "data": {"text": f"这是你的塔罗牌: \n{msg_obj.card_name}\n{msg_obj.card_text}\n"}}
+    msg_obj.msg_text  = {"type": "text", "data": {"text": f"这是你的塔罗牌: \n{msg_obj.card_name}\n"}}
     return None
 
 def main_logic(robot_server):
@@ -57,7 +56,7 @@ def main_logic(robot_server):
                 ai_server.model_type    = "deepseek-v4-flash"
                 ai_server.thinking_type = "disabled"
                 ai_server.system_text   = Config.TAROT_ROLE
-                ai_server.user_text     = f"抽牌结果:{robot_server.card_name},牌面解释:{robot_server.card_text}"
+                ai_server.user_text     = f"抽牌结果:{robot_server.card_name}"
                 ai_server.ai_request()
                 robot_server.msg_ai_explian   = {"type": "text", "data": {"text": ai_server.ai_message['content']}} 
                 robot_server.msg_send_private = [robot_server.msg_file, robot_server.msg_text, robot_server.msg_ai_explian]
