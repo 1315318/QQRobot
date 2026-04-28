@@ -1,7 +1,7 @@
 from config import Config
 import requests
 
-class RobotData:
+class RobotServer:
     def __init__(self, msg_data):
         self.msg_type     = msg_data.get('message_type')
         self.user_id      = msg_data.get('user_id')
@@ -17,7 +17,6 @@ class RobotData:
         self.user_title   = sender.get('title') 
         print("消息载入完成")
 
-class RobotServer:
     def send_msg(self, send_data_obj):
         headers = {"Authorization": f"Bearer {Config.ONEBOT_TOKEN}"}
         if send_data_obj.msg_type == "private":

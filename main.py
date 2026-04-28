@@ -1,11 +1,10 @@
 from flask    import Flask,request
 from database import DatabaseManager
 from ai       import AiServer
-from robot    import RobotData,RobotServer
+from robot    import RobotServer
 import random
    
 app              = Flask(__name__)
-robot_server     = RobotServer()
 database_manager = DatabaseManager()
 
 def tarot(msg_obj):
@@ -26,65 +25,64 @@ def receive():
     msg_data = request.json
     if not msg_data:
         return "nodata"
-    msg_obj = RobotData(msg_data)    
-    if (msg_obj.msg_type == "group" and msg_obj.at_judgement) or msg_obj.msg_type == "private":
-        user_id  = msg_obj.user_id
-        group_id = msg_obj.group_id
-        if msg_obj.group_id:
+    robot_server = RobotServer(msg_data)    
+    if (robot_server.msg_type == "group" and robot_server.at_judgement) or robot_server.msg_type == "private":
+        user_id  = robot_server.user_id
+        group_id = robot_server.group_id
+        if robot_server.group_id:
             history_text = database_manager.takeout("history", "role, text", "user_id = ? AND group_id = ?", (user_id, group_id))
         else:
             history_text = database_manager.takeout("history", "role, text", "user_id = ? AND group_id IS NULL", (user_id,))
         history_list = []
         history_list.extend([{"content": text, "role": role} for role, text in history_text])
         system_text = "你的是ai小助手Kiriko,根据群友的消息做出回复,尽量是可爱女孩风格,可以使用颜文字,在可爱聊天的同时,必须优先通过调用工具来提供服务,不要自己编造结果"
-        user_text   = f"群ID：{msg_obj.group_id}，群聊名：{msg_obj.group_name}，用户ID：{msg_obj.user_id}，用户名：{msg_obj.user_name}，群等级：{msg_obj.user_level}，群角色：{msg_obj.user_role}，群头衔：{msg_obj.user_title}，消息内容：{msg_obj.msg}"
+        user_text   = f"群ID：{robot_server.group_id}，群聊名：{robot_server.group_name}，用户ID：{robot_server.user_id}，用户名：{robot_server.user_name}，群等级：{robot_server.user_level}，群角色：{robot_server.user_role}，群头衔：{robot_server.user_title}，消息内容：{robot_server.msg}"
         function_parameter     = {"type": "object", "properties": {}, "required": []}
         function_tarot         = {"name": "tarot", "description": "当用户表示想要进行占卜,算命或询问运势以及想要抽取塔罗牌时,才调用此函数", "parameters": function_parameter}
         function_tarot_history = {"name": "tarot_history", "description": "当用户表示想要知道自己占卜,算命或询问运势结果或塔罗牌抽取的历史记录,才调用此函数", "parameters": function_parameter}
         tool_tarot             = {"type": "function", "function": function_tarot}
         tool_tarot_history     = {"type": "function", "function": function_tarot_history}
         tools                  = [tool_tarot, tool_tarot_history]
-        ai_main = AiServer(system_text, user_text, history_list, tools, model_type = "deepseek-v4-pro", thinking_type = "enabled")
-        ai_main.ai_request()
-        if ai_main.ai_message['content'] == "":
+        ai_server = AiServer(system_text, user_text, history_list, tools, model_type = "deepseek-v4-pro", thinking_type = "enabled")
+        ai_server.ai_request()
+        if ai_server.ai_message['content'] == "":
             print("ai返回文本内容为空,跳过发送")
         else:
-            msg_obj.msg_send_group   = [{"type": "at", "data": {"qq": msg_obj.user_id}},{"type": "text", "data": {"text": ai_main.ai_message['content']}}]
-            msg_obj.msg_send_private = {"type": "text", "data": {"text": ai_main.ai_message['content']}}
-            robot_server.send_msg(msg_obj)
-        tool = ai_main.ai_message.get("tool_calls")
+            robot_server.msg_send_group   = [{"type": "at", "data": {"qq": robot_server.user_id}},{"type": "text", "data": {"text": ai_server.ai_message['content']}}]
+            robot_server.msg_send_private = {"type": "text", "data": {"text": ai_server.ai_message['content']}}
+            robot_server.send_msg(robot_server)
+        tool = ai_server.ai_message.get("tool_calls")
         print(f"tool: {tool}")
         if tool:
             function_name = tool[0]["function"]["name"]
             function_arguments = tool[0]["function"]["arguments"]
             if function_name == "tarot":
-                tarot(msg_obj)
-                ai_main.model_type    = "deepseek-v4-flash"
-                ai_main.thinking_type = "disabled"
-                ai_main.system_text   = "你是ai牌面解读助手Kiriko,你需要根据上传的塔罗牌牌名和牌面信息对牌面进行解释并对用户做出提醒,语气尽量是可爱女孩的风格,可以使用颜文字"
-                ai_main.user_text     = f"抽牌结果:{msg_obj.card_name},牌面解释:{msg_obj.card_text}"
-                ai_main.ai_request()
-                msg_obj.msg_ai_explian   = {"type": "text", "data": {"text": ai_main.ai_message['content']}} 
-                msg_obj.msg_send_private = [msg_obj.msg_file, msg_obj.msg_text, msg_obj.msg_ai_explian]
-                msg_obj.msg_send_group   = [msg_obj.msg_file, msg_obj.msg_at, msg_obj.msg_text, msg_obj.msg_ai_explian]
-                robot_server.send_msg(msg_obj)
-                database_manager.deposit("tarot_history", "(user_id, card_name)", "(?, ?)", (msg_obj.user_id, msg_obj.card_name))
-                database_manager.deposit("history", "(role, user_id, group_id, text)", "(?, ?, ?, ?)", ("user", msg_obj.user_id, msg_obj.group_id, msg_obj.msg))
-                airesponse_role = ai_main.ai_message['role']
-                airesponse_text = ai_main.ai_message['content']
-                database_manager.deposit("history", "(role, user_id, group_id, text)", "(?, ?, ?, ?)", (airesponse_role, msg_obj.user_id, msg_obj.group_id, airesponse_text))
+                tarot(robot_server)
+                ai_server.model_type    = "deepseek-v4-flash"
+                ai_server.thinking_type = "disabled"
+                ai_server.system_text   = "你是ai牌面解读助手Kiriko,你需要根据上传的塔罗牌牌名和牌面信息对牌面进行解释并对用户做出提醒,语气尽量是可爱女孩的风格,可以使用颜文字"
+                ai_server.user_text     = f"抽牌结果:{robot_server.card_name},牌面解释:{robot_server.card_text}"
+                ai_server.ai_request()
+                robot_server.msg_ai_explian   = {"type": "text", "data": {"text": ai_server.ai_message['content']}} 
+                robot_server.msg_send_private = [robot_server.msg_file, robot_server.msg_text, robot_server.msg_ai_explian]
+                robot_server.msg_send_group   = [robot_server.msg_file, robot_server.msg_at, robot_server.msg_text, robot_server.msg_ai_explian]
+                robot_server.send_msg(robot_server)
+                database_manager.deposit("tarot_history", "(user_id, card_name)", "(?, ?)", (robot_server.user_id, robot_server.card_name))
+                database_manager.deposit("history", "(role, user_id, group_id, text)", "(?, ?, ?, ?)", ("user", robot_server.user_id, robot_server.group_id, robot_server.msg))
+                airesponse_role = ai_server.ai_message['role']
+                airesponse_text = ai_server.ai_message['content']
+                database_manager.deposit("history", "(role, user_id, group_id, text)", "(?, ?, ?, ?)", (airesponse_role, robot_server.user_id, robot_server.group_id, airesponse_text))
             if function_name == "tarot_history":
                 tarot_history = database_manager.takeout("tarot_history", "card_name, timestamp", "user_id = ?", (user_id,))
-                msg_obj.history_text = "\n".join([f"·{car_name} {timestamp}" for car_name, timestamp in tarot_history])
-                msg_obj.msg_send_group   = [{"type": "at", "data": {"qq": msg_obj.user_id}}, {"type": "text", "data": {"text": f"这是你的塔罗牌记录:\n{msg_obj.history_text}"}}]
-                msg_obj.msg_send_private = {"type": "text", "data": {"text": f"这是你的塔罗牌记录:\n{msg_obj.history_text}"}}
-                robot_server.send_msg(msg_obj)
+                robot_server.history_text = "\n".join([f"·{car_name} {timestamp}" for car_name, timestamp in tarot_history])
+                robot_server.msg_send_group   = [{"type": "at", "data": {"qq": robot_server.user_id}}, {"type": "text", "data": {"text": f"这是你的塔罗牌记录:\n{robot_server.history_text}"}}]
+                robot_server.msg_send_private = {"type": "text", "data": {"text": f"这是你的塔罗牌记录:\n{robot_server.history_text}"}}
+                robot_server.send_msg(robot_server)
         else:
-            database_manager.deposit("history", "(role, user_id, group_id, text)", "(?, ?, ?, ?)", ("user", msg_obj.user_id, msg_obj.group_id, msg_obj.msg))
-            airesponse_role = ai_main.ai_message['role']
-            airesponse_text = ai_main.ai_message['content']
-            database_manager.deposit("history", "(role, user_id, group_id, text)", "(?, ?, ?, ?)", (airesponse_role, msg_obj.user_id, msg_obj.group_id, airesponse_text))
-            
+            database_manager.deposit("history", "(role, user_id, group_id, text)", "(?, ?, ?, ?)", ("user", robot_server.user_id, robot_server.group_id, robot_server.msg))
+            airesponse_role = ai_server.ai_message['role']
+            airesponse_text = ai_server.ai_message['content']
+            database_manager.deposit("history", "(role, user_id, group_id, text)", "(?, ?, ?, ?)", (airesponse_role, robot_server.user_id, robot_server.group_id, airesponse_text))
     else:
         print("无关消息")
     return "ok"
