@@ -9,3 +9,5 @@ class Config:
     ONEBOT_TOKEN   = os.getenv("ONEBOT_TOKEN")
     DEEPSEEK_API   = os.getenv("DEEPSEEK_API")
     DEEPSEEK_TOKEN = os.getenv("DEEPSEEK_TOKEN")
+    MAIN_ROLE      = os.getenv("MAIN_ROLE")
+    TAROT_ROLE     = os.getenv("TAROT_ROLE")

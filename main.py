@@ -2,6 +2,7 @@ from flask    import Flask,request
 from database import DatabaseManager
 from ai       import AiServer
 from robot    import RobotServer
+from config   import Config
 import random
    
 app              = Flask(__name__)
@@ -35,7 +36,6 @@ def receive():
             history_text = database_manager.takeout("history", "role, text", "user_id = ? AND group_id IS NULL", (user_id,))
         history_list = []
         history_list.extend([{"content": text, "role": role} for role, text in history_text])
-        system_text = "你的是ai小助手Kiriko,根据群友的消息做出回复,尽量是可爱女孩风格,可以使用颜文字,在可爱聊天的同时,必须优先通过调用工具来提供服务,不要自己编造结果"
         user_text   = f"群ID：{robot_server.group_id}，群聊名：{robot_server.group_name}，用户ID：{robot_server.user_id}，用户名：{robot_server.user_name}，群等级：{robot_server.user_level}，群角色：{robot_server.user_role}，群头衔：{robot_server.user_title}，消息内容：{robot_server.msg}"
         function_parameter     = {"type": "object", "properties": {}, "required": []}
         function_tarot         = {"name": "tarot", "description": "当用户表示想要进行占卜,算命或询问运势以及想要抽取塔罗牌时,才调用此函数", "parameters": function_parameter}
@@ -43,7 +43,7 @@ def receive():
         tool_tarot             = {"type": "function", "function": function_tarot}
         tool_tarot_history     = {"type": "function", "function": function_tarot_history}
         tools                  = [tool_tarot, tool_tarot_history]
-        ai_server = AiServer(system_text, user_text, history_list, tools, model_type = "deepseek-v4-pro", thinking_type = "enabled")
+        ai_server = AiServer(Config.MAIN_ROLE, user_text, history_list, tools, model_type = "deepseek-v4-pro", thinking_type = "enabled")
         ai_server.ai_request()
         if ai_server.ai_message['content'] == "":
             print("ai返回文本内容为空,跳过发送")
@@ -60,7 +60,7 @@ def receive():
                 tarot(robot_server)
                 ai_server.model_type    = "deepseek-v4-flash"
                 ai_server.thinking_type = "disabled"
-                ai_server.system_text   = "你是ai牌面解读助手Kiriko,你需要根据上传的塔罗牌牌名和牌面信息对牌面进行解释并对用户做出提醒,语气尽量是可爱女孩的风格,可以使用颜文字"
+                ai_server.system_text   = Config.TAROT_ROLE
                 ai_server.user_text     = f"抽牌结果:{robot_server.card_name},牌面解释:{robot_server.card_text}"
                 ai_server.ai_request()
                 robot_server.msg_ai_explian   = {"type": "text", "data": {"text": ai_server.ai_message['content']}} 
@@ -74,7 +74,7 @@ def receive():
                 database_manager.deposit("history", "(role, user_id, group_id, text)", "(?, ?, ?, ?)", (airesponse_role, robot_server.user_id, robot_server.group_id, airesponse_text))
             if function_name == "tarot_history":
                 tarot_history = database_manager.takeout("tarot_history", "card_name, timestamp", "user_id = ?", (user_id,))
-                robot_server.history_text = "\n".join([f"·{car_name} {timestamp}" for car_name, timestamp in tarot_history])
+                robot_server.history_text = "\n".join([f"{timestamp}\n·{car_name}" for car_name, timestamp in tarot_history])
                 robot_server.msg_send_group   = [{"type": "at", "data": {"qq": robot_server.user_id}}, {"type": "text", "data": {"text": f"这是你的塔罗牌记录:\n{robot_server.history_text}"}}]
                 robot_server.msg_send_private = {"type": "text", "data": {"text": f"这是你的塔罗牌记录:\n{robot_server.history_text}"}}
                 robot_server.send_msg(robot_server)
