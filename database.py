@@ -12,11 +12,13 @@ class DatabaseManager:
         with self.get_connect() as connect:
             connect.execute('''CREATE TABLE IF NOT EXISTS
                             history(
-                            id        INTEGER PRIMARY KEY AUTOINCREMENT,
-                            user_id   TEXT NOT NULL,
-                            group_id  TEXT,
-                            role      TEXT NOT NULL,
-                            text      TEXT NOT NULL,
+                            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id      TEXT NOT NULL,
+                            group_id     TEXT,
+                            role         TEXT NOT NULL,
+                            content      TEXT NOT NULL,
+                            tool_calls   TEXT,
+                            tool_call_id TEXT,
                             timestamp DATETIME DEFAULT (datetime('now', 'localtime'))
                             )''')
             connect.execute('''CREATE TABLE IF NOT EXISTS
@@ -30,6 +32,7 @@ class DatabaseManager:
                             tarot_content(
                             id        INTEGER PRIMARY KEY AUTOINCREMENT,
                             card_name TEXT NOT NULL,
+                            card_text TEXT NOT NULL,
                             card_path TEXT NOT NULL
                             )''')
     

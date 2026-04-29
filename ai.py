@@ -25,6 +25,7 @@ class AiServer:
         headers  = {'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': f'Bearer {Config.DEEPSEEK_TOKEN}'}
         response = requests.request("POST", Config.DEEPSEEK_API, headers = headers, data = payload)
         print(response)
+        print(response.text)
         ai_message = response.json()['choices'][0]['message']
         self.ai_message = ai_message
 
