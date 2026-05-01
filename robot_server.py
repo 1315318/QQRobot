@@ -17,15 +17,14 @@ class RobotServer:
         self.user_title   = sender.get('title') 
         print("消息载入完成")
 
-    def send_msg(self, send_data_obj):
+    def send_private(self, robot_server):
         headers = {"Authorization": f"Bearer {Config.ONEBOT_TOKEN}"}
-        if send_data_obj.msg_type == "private":
-            url      = f"{Config.ONEBOT_API}/send_private_msg"
-            payload  = {"user_id": send_data_obj.user_id, "message": send_data_obj.msg_send_private} 
-            response = requests.post(url, json=payload, headers=headers)
-        elif send_data_obj.msg_type == "group" and send_data_obj.at_judgement:
-            url      = f"{Config.ONEBOT_API}/send_group_msg"
-            payload  = {"group_id": send_data_obj.group_id, "message": send_data_obj.msg_send_group} 
-            response = requests.post(url, json=payload, headers=headers)
-        else:
-            print("消息发送失败")
+        url      = f"{Config.ONEBOT_API}/send_private_msg"
+        payload  = {"user_id": robot_server.user_id, "message": robot_server.msg_list} 
+        response = requests.post(url, json=payload, headers=headers)
+    
+    def send_group(self, robot_server):
+        headers = {"Authorization": f"Bearer {Config.ONEBOT_TOKEN}"}
+        url      = f"{Config.ONEBOT_API}/send_group_msg"
+        payload  = {"group_id": robot_server.group_id, "message": robot_server.msg_list} 
+        response = requests.post(url, json=payload, headers=headers)
