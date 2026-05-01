@@ -35,10 +35,13 @@ def main_logic(robot_server):
         for role, content, tool_calls, tool_call_id in history_text:
             if role == "user":
                 history_list.extend([{"role": role, "content": content}])
-            if role == "assistant" and tool_calls == "":
-                history_list.extend([{"role": role, "content": content}])
-            else:
-                history_list.extend([{"role": role, "content": content, "tool_call_id": tool_call_id, "tool_calls": tool_calls}])
+            if role == "assistant" :
+                if tool_calls:
+                    history_list.extend([{"role": role, "content": content, "tool_calls": json.loads(tool_calls)}])
+                else:
+                    history_list.extend([{"role": role, "content": content}])
+            if role == "tool" and tool_call_id:
+                history_list.extend([{"role": role, "content": content, "tool_call_id": tool_call_id}])
         print(history_list)
         user_text   = f"群ID：{robot_server.group_id}，群聊名：{robot_server.group_name}，用户ID：{robot_server.user_id}，用户名：{robot_server.user_name}，群等级：{robot_server.user_level}，群角色：{robot_server.user_role}，群头衔：{robot_server.user_title}，消息内容：{robot_server.msg}"
         function_parameter     = {"type": "object", "properties": {}, "required": []}
