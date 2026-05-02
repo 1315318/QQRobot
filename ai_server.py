@@ -12,7 +12,7 @@ class AiServer:
         self.thinking_type = thinking_type 
         self.history_list  = history_list
         self.tools         = tools        
-    
+
     def ai_request(self):
         request_dict = {
         "messages": [{"content": self.system_text, "role": "system"}, *self.history_list, {"content": self.user_text, "role": "user"}], 
@@ -29,4 +29,4 @@ class AiServer:
         ai_message = response.json()['choices'][0]['message']
         self.ai_message = ai_message
 
-
+ 
