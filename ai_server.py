@@ -21,12 +21,11 @@ class AiServer:
         "response_format": {"type": "text"}, "max_tokens": 8000, "frequency_penalty": 0, "presence_penalty": 0, "temperature": 0, "top_p": 0.9,
         "stop": None, "stream": False, "stream_options": None, "logprobs": False, "top_logprobs": None
         }
-        payload  = json.dumps(request_dict)             
+        payload  = json.dumps(request_dict)
+        print(request_dict)             
         headers  = {'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': f'Bearer {Config.DEEPSEEK_TOKEN}'}
         response = requests.request("POST", Config.DEEPSEEK_API, headers = headers, data = payload)
         print(response)
         print(response.text)
         ai_message = response.json()['choices'][0]['message']
         self.ai_message = ai_message
-
- 

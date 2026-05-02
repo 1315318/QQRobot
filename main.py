@@ -65,6 +65,23 @@ def tarot_history_call(robot_server):
                 msg_package.robot_server_msg(private_msg_type, robot_server)
                 robot_server.send_private(robot_server)
 
+def tools_call(robot_server, ai_server):
+    tool = ai_server.ai_message.get("tool_calls")
+    print(f"tool: {tool}")
+    if tool:
+        function_name = tool[0]["function"]["name"]
+        function_arguments = tool[0]["function"]["arguments"]
+        if function_name == "tarot":
+            tarot_call(robot_server, ai_server)
+        if function_name == "tarot_history":
+            tarot_history_call(robot_server)
+    else:
+        database_manager.deposit("history", "(role, user_id, group_id, content, tool_calls, tool_call_id)", "(?, ?, ?, ?, ?, ?)", ("user", robot_server.user_id, robot_server.group_id, robot_server.msg, "", ""))
+        airesponse_role = ai_server.ai_message['role']
+        airesponse_text = ai_server.ai_message['content']
+        database_manager.deposit("history", "(role, user_id, group_id, content, tool_calls, tool_call_id)", "(?, ?, ?, ?, ?, ?)", (airesponse_role, robot_server.user_id, robot_server.group_id, airesponse_text, "", ""))
+        database_manager.deposit("history", "(role, user_id, group_id, content, tool_calls, tool_call_id)", "(?, ?, ?, ?, ?, ?)", ("tool", robot_server.user_id, robot_server.group_id, "", "", ""))
+
 def main_logic(robot_server):
     if (robot_server.msg_type == "group" and robot_server.at_judgement) or robot_server.msg_type == "private":
         if robot_server.group_id:
@@ -82,7 +99,6 @@ def main_logic(robot_server):
                     history_list.extend([{"role": role, "content": content}])
             if role == "tool" and tool_call_id:
                 history_list.extend([{"role": role, "content": content, "tool_call_id": tool_call_id}])
-        print(history_list)
         user_text   = f"群ID：{robot_server.group_id}，群聊名：{robot_server.group_name}，用户ID：{robot_server.user_id}，用户名：{robot_server.user_name}，群等级：{robot_server.user_level}，群角色：{robot_server.user_role}，群头衔：{robot_server.user_title}，消息内容：{robot_server.msg}"
         tools = ai_tools.ai_tools()
         ai_server = AiServer(Config.MAIN_ROLE, user_text, history_list, tools, model_type = "deepseek-v4-pro", thinking_type = "disabled")
@@ -99,21 +115,7 @@ def main_logic(robot_server):
                 private_msg_type = {"type": "text"}
                 msg_package.robot_server_msg(private_msg_type, robot_server)
                 robot_server.send_private(robot_server)
-        tool = ai_server.ai_message.get("tool_calls")
-        print(f"tool: {tool}")
-        if tool:
-            function_name = tool[0]["function"]["name"]
-            function_arguments = tool[0]["function"]["arguments"]
-            if function_name == "tarot":
-                tarot_call(robot_server, ai_server)
-            if function_name == "tarot_history":
-                tarot_history_call(robot_server)
-        else:
-            database_manager.deposit("history", "(role, user_id, group_id, content, tool_calls, tool_call_id)", "(?, ?, ?, ?, ?, ?)", ("user", robot_server.user_id, robot_server.group_id, robot_server.msg, "", ""))
-            airesponse_role = ai_server.ai_message['role']
-            airesponse_text = ai_server.ai_message['content']
-            database_manager.deposit("history", "(role, user_id, group_id, content, tool_calls, tool_call_id)", "(?, ?, ?, ?, ?, ?)", (airesponse_role, robot_server.user_id, robot_server.group_id, airesponse_text, "", ""))
-            database_manager.deposit("history", "(role, user_id, group_id, content, tool_calls, tool_call_id)", "(?, ?, ?, ?, ?, ?)", ("tool", robot_server.user_id, robot_server.group_id, "", "", ""))
+        tools_call(robot_server, ai_server)
     else:
         print("无关消息")
 
