@@ -56,5 +56,15 @@ class DatabaseManager:
         sql = f"INSERT INTO {table} {column} VALUES {table_format}"
         self.execute_action(sql, params)
 
+    def deposit_chat_history(self, role, user_id, group_id, content, tool_calls, too_call_id):
+        self.deposit("history", "(role, user_id, group_id, content, tool_calls, tool_call_id)", "(?, ?, ?, ?, ?, ?)", (role, user_id, group_id, content, tool_calls, too_call_id))
 
+    def deposit_tarot_history(self, user_id, card_name):
+        self.deposit("tarot_history", "(user_id, card_name)", "(?, ?)", (user_id, card_name))
 
+    def takeout_chat_history(self, user_id, group_id):
+        if group_id:
+            history_text = self.takeout("history", "role, content, tool_calls, tool_call_id", "user_id = ? AND group_id = ?", (user_id, group_id))
+        else:
+            history_text = self.takeout("history", "role, content, tool_calls, tool_call_id", "user_id = ? AND group_id IS NULL", (user_id,))
+        return history_text
