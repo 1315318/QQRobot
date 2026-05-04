@@ -82,39 +82,50 @@ def tools_call(robot_server, ai_server):
         database_manager.deposit("history", "(role, user_id, group_id, content, tool_calls, tool_call_id)", "(?, ?, ?, ?, ?, ?)", (airesponse_role, robot_server.user_id, robot_server.group_id, airesponse_text, "", ""))
         database_manager.deposit("history", "(role, user_id, group_id, content, tool_calls, tool_call_id)", "(?, ?, ?, ?, ?, ?)", ("tool", robot_server.user_id, robot_server.group_id, "", "", ""))
 
+def history_takeout(robot_server):
+    if robot_server.group_id:
+        history_text = database_manager.takeout("history", "role, content, tool_calls, tool_call_id", "user_id = ? AND group_id = ?", (robot_server.user_id, robot_server.group_id))
+    else:
+        history_text = database_manager.takeout("history", "role, content, tool_calls, tool_call_id", "user_id = ? AND group_id IS NULL", (robot_server.user_id,))
+    history_list = []
+    for role, content, tool_calls, tool_call_id in history_text:
+        if role == "user":
+            history_list.extend([{"role": role, "content": content}])
+        if role == "assistant" :
+            if tool_calls:
+                history_list.extend([{"role": role, "content": content, "tool_calls": json.loads(tool_calls)}])
+            else:
+                history_list.extend([{"role": role, "content": content}])
+        if role == "tool" and tool_call_id:
+            history_list.extend([{"role": role, "content": content, "tool_call_id": tool_call_id}])
+    return history_list
+
+def first_send(robot_server, ai_server):
+    if ai_server.ai_message['content'] == "":
+        print("ai返回文本内容为空,跳过发送")
+    else:
+        robot_server.text = ai_server.ai_message['content']
+        if robot_server.msg_type == "group":
+            group_msg_type = {"type": "at, text"}
+            msg_package.robot_server_msg(group_msg_type, robot_server)
+            robot_server.send_group(robot_server)
+        if robot_server.msg_type == "private":
+            private_msg_type = {"type": "text"}
+            msg_package.robot_server_msg(private_msg_type, robot_server)
+            robot_server.send_private(robot_server)
+
 def main_logic(robot_server):
     if (robot_server.msg_type == "group" and robot_server.at_judgement) or robot_server.msg_type == "private":
-        if robot_server.group_id:
-            history_text = database_manager.takeout("history", "role, content, tool_calls, tool_call_id", "user_id = ? AND group_id = ?", (robot_server.user_id, robot_server.group_id))
-        else:
-            history_text = database_manager.takeout("history", "role, content, tool_calls, tool_call_id", "user_id = ? AND group_id IS NULL", (robot_server.user_id,))
-        history_list = []
-        for role, content, tool_calls, tool_call_id in history_text:
-            if role == "user":
-                history_list.extend([{"role": role, "content": content}])
-            if role == "assistant" :
-                if tool_calls:
-                    history_list.extend([{"role": role, "content": content, "tool_calls": json.loads(tool_calls)}])
-                else:
-                    history_list.extend([{"role": role, "content": content}])
-            if role == "tool" and tool_call_id:
-                history_list.extend([{"role": role, "content": content, "tool_call_id": tool_call_id}])
-        user_text   = f"群ID：{robot_server.group_id}，群聊名：{robot_server.group_name}，用户ID：{robot_server.user_id}，用户名：{robot_server.user_name}，群等级：{robot_server.user_level}，群角色：{robot_server.user_role}，群头衔：{robot_server.user_title}，消息内容：{robot_server.msg}"
+        history_list = history_takeout(robot_server)
+        if robot_server.msg_type == "group":
+            user_text = f"群ID：{robot_server.group_id}，群聊名：{robot_server.group_name}，用户ID：{robot_server.user_id}，用户名：{robot_server.user_name}，\
+                群等级：{robot_server.user_level}，群角色：{robot_server.user_role}，群头衔：{robot_server.user_title}，消息内容：{robot_server.msg}"
+        if robot_server.msg_type == "private":
+            user_text = f"用户ID：{robot_server.user_id}，用户名：{robot_server.user_name}，消息内容：{robot_server.msg}"
         tools = ai_tools.ai_tools()
         ai_server = AiServer(Config.MAIN_ROLE, user_text, history_list, tools, model_type = "deepseek-v4-pro", thinking_type = "disabled")
         ai_server.ai_request()
-        if ai_server.ai_message['content'] == "":
-            print("ai返回文本内容为空,跳过发送")
-        else:
-            robot_server.text   = ai_server.ai_message['content']
-            if robot_server.msg_type == "group":
-                group_msg_type   = {"type": "at, text"}
-                msg_package.robot_server_msg(group_msg_type, robot_server)
-                robot_server.send_group(robot_server)
-            if robot_server.msg_type == "private":
-                private_msg_type = {"type": "text"}
-                msg_package.robot_server_msg(private_msg_type, robot_server)
-                robot_server.send_private(robot_server)
+        first_send(robot_server, ai_server)
         tools_call(robot_server, ai_server)
     else:
         print("无关消息")
