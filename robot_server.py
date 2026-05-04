@@ -17,14 +17,14 @@ class RobotServer:
         self.user_title   = sender.get('title') 
         print("消息载入完成")
 
-    def send_private(self, robot_server):
+    def send_private(self):
         headers = {"Authorization": f"Bearer {Config.ONEBOT_TOKEN}"}
         url      = f"{Config.ONEBOT_API}/send_private_msg"
-        payload  = {"user_id": robot_server.user_id, "message": robot_server.msg_list} 
+        payload  = {"user_id": self.user_id, "message": self.msg_list} 
         response = requests.post(url, json=payload, headers=headers)
     
-    def send_group(self, robot_server):
+    def send_group(self):
         headers = {"Authorization": f"Bearer {Config.ONEBOT_TOKEN}"}
         url      = f"{Config.ONEBOT_API}/send_group_msg"
-        payload  = {"group_id": robot_server.group_id, "message": robot_server.msg_list} 
+        payload  = {"group_id": self.group_id, "message": self.msg_list} 
         response = requests.post(url, json=payload, headers=headers)

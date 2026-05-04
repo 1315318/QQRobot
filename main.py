@@ -3,9 +3,9 @@ from ai_server        import AiServer
 from robot_server     import RobotServer
 from config           import Config
 from msg_package      import MsgPackage
-from ai_tools         import AiTools
+from ai_tools_list    import AiTools
 from flask            import Flask,request
-import random
+from ai_tools         import Tarot,Tarot_History
 import threading
 import json
    
@@ -13,68 +13,9 @@ app              = Flask(__name__)
 database_manager = DatabaseManager()
 msg_package      = MsgPackage()
 ai_tools         = AiTools()
-
-def tarot():
-    tarot_text = database_manager.takeout("tarot_content", "card_name, card_text, card_path")
-    tarot_list = []
-    tarot_list.extend([{"card_name": card_name,"card_text":card_text, "card_path": card_path} for card_name, card_text, card_path in tarot_text])
-    tarot_result = random.choice(tarot_list)
-    return tarot_result
-
-def tarot_ai_call(ai_server, tarot_result):
-    ai_server.model_type    = "deepseek-v4-flash"
-    ai_server.thinking_type = "disabled"
-    ai_server.system_text   = Config.TAROT_ROLE
-    ai_server.user_text     = f"抽牌结果：{tarot_result['card_name']}，牌面解释：{tarot_result['card_text']}"
-    ai_server.ai_request()
-
-def deposit_tarot_call_history(robot_server, ai_server, tarot_result):
-    database_manager.deposit_tarot_history(robot_server.user_id, tarot_result['card_name'])
-    database_manager.deposit_chat_history("user", robot_server.user_id, robot_server.group_id, robot_server.msg, "", "")
-    database_manager.deposit_chat_history("assistant", robot_server.user_id, robot_server.group_id, ai_server.ai_message['content'], json.dumps(ai_server.airesponse_tool_calls), "")
-    database_manager.deposit_chat_history("tool", robot_server.user_id, robot_server.group_id,  ai_server.user_text, "", ai_server.airesponse_tool_id)
-
-def tarot_send(robot_server, ai_server):
-    robot_server.msg_list.append({"type": "text", "data": {"text": ai_server.ai_message['content']}})
-    if robot_server.msg_type == "group":
-        robot_server.send_group(robot_server)
-    if robot_server.msg_type == "private":
-        robot_server.send_private(robot_server)
-
-def tarot_call(robot_server, ai_server):
-    tarot_result = tarot()
-    robot_server.image_path = tarot_result["card_path"]           
-    tarot_msg_type          = {"type": "image, at, text"}
-    robot_server.text       = f"这是你的塔罗牌:\n{tarot_result['card_name']}\n{tarot_result['card_text']}\n"
-    msg_package.robot_server_msg(tarot_msg_type, robot_server)
-    ai_server.airesponse_tool_id      = ai_server.ai_message.get("tool_calls")[0].get('id')
-    ai_server.airesponse_tool_calls   = ai_server.ai_message.get("tool_calls")
-    tarot_ai_call(ai_server, tarot_result)
-    tarot_send(robot_server, ai_server)
-    deposit_tarot_call_history(robot_server, ai_server, tarot_result)
+tarot            = Tarot()
+tarot_history    = Tarot_History()
     
-def deposit_tarot_history_call(robot_server, ai_server):
-    database_manager.deposit_chat_history("user", robot_server.user_id, robot_server.group_id, robot_server.msg, "", "")
-    database_manager.deposit_chat_history("assistant", robot_server.user_id, robot_server.group_id, ai_server.ai_message['content'], json.dumps(ai_server.airesponse_tool_calls), "")
-    database_manager.deposit_chat_history("tool", robot_server.user_id, robot_server.group_id, ai_server.user_text, "", ai_server.airesponse_tool_id)
-
-def tarot_history_call(robot_server, ai_server):
-    tarot_history = database_manager.takeout("tarot_history", "card_name, timestamp", "user_id = ?", (robot_server.user_id,))
-    robot_server.history_text = "\n".join([f"{timestamp}\n·{car_name}" for car_name, timestamp in tarot_history])
-    robot_server.text = f"这是你的塔罗牌记录:\n{robot_server.history_text}"
-    if robot_server.msg_type == "group":
-        group_msg_type   = {"type": "at, text"}
-        msg_package.robot_server_msg(group_msg_type, robot_server)
-        robot_server.send_group(robot_server)
-    if robot_server.msg_type == "private":
-        private_msg_type = {"type": "text"}
-        msg_package.robot_server_msg(private_msg_type, robot_server)
-        robot_server.send_private(robot_server)
-    ai_server.airesponse_tool_id      = ai_server.ai_message.get("tool_calls")[0].get('id')
-    ai_server.airesponse_tool_calls   = ai_server.ai_message.get("tool_calls")
-    ai_server.user_text = robot_server.text
-    deposit_tarot_history_call(robot_server, ai_server)
-
 def deposit_without_toolcall(robot_server, ai_server):
     database_manager.deposit_chat_history("user", robot_server.user_id, robot_server.group_id, robot_server.msg, "", "")
     database_manager.deposit_chat_history("assistant", robot_server.user_id, robot_server.group_id, ai_server.ai_message['content'], "", "")
@@ -87,9 +28,9 @@ def tools_call(robot_server, ai_server):
         function_name = tool[0]["function"]["name"]
         function_arguments = tool[0]["function"]["arguments"]
         if function_name == "tarot":
-            tarot_call(robot_server, ai_server)
+            tarot.tarot_call(robot_server, ai_server)
         if function_name == "tarot_history":
-            tarot_history_call(robot_server, ai_server)
+            tarot_history.tarot_history_call(robot_server, ai_server)
     else:
         deposit_without_toolcall(robot_server, ai_server)
 
@@ -116,11 +57,11 @@ def first_send(robot_server, ai_server):
         if robot_server.msg_type == "group":
             group_msg_type = {"type": "at, text"}
             msg_package.robot_server_msg(group_msg_type, robot_server)
-            robot_server.send_group(robot_server)
+            robot_server.send_group()
         if robot_server.msg_type == "private":
             private_msg_type = {"type": "text"}
             msg_package.robot_server_msg(private_msg_type, robot_server)
-            robot_server.send_private(robot_server)
+            robot_server.send_private()
 
 def main_logic(robot_server):
     if (robot_server.msg_type == "group" and robot_server.at_judgement) or robot_server.msg_type == "private":

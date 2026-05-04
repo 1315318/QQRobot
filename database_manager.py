@@ -68,3 +68,7 @@ class DatabaseManager:
         else:
             history_text = self.takeout("history", "role, content, tool_calls, tool_call_id", "user_id = ? AND group_id IS NULL", (user_id,))
         return history_text
+    
+    def takeout_tarot_history(self, user_id):
+        tarot_history = self.takeout("tarot_history", "card_name, timestamp", "user_id = ?", (user_id,))
+        return tarot_history
