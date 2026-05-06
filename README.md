@@ -1,4 +1,3 @@
-```markdown
 # 🤖 QQRobot – 基于 LLBot 的 QQ 聊天机器人
 
 一个运行在 **LLBot** 框架上的 QQ 机器人，内置 **DeepSeek 大模型**对话能力，并可**抽取塔罗牌**并进行牌面解读。  
@@ -23,6 +22,8 @@
 
 ---
 
+
+
 ## 🚀 部署步骤
 
 ### 1. 克隆本项目
@@ -30,6 +31,7 @@
 ```bash
 git clone https://github.com/1315318/QQRobot.git
 cd QQRobot
+
 ```
 
 ### 2. 配置 `.env` 文件
@@ -46,7 +48,7 @@ MAIN_ROLE        = "你是聊天小助手Kiriko，根据对方的消息做出回
 TAROT_ROLE       = "你是牌面解读助手Kiriko，你需要根据上传的塔罗牌牌名和牌面信息对牌面进行解释并对用户做出提醒，语气尽量是可爱女孩的风格，可以使用颜文字"
 ```
 
-> **注意**：请妥善保管 `.env` 文件，不要提交到公开仓库（建议已加入 `.gitignore`）。
+> **注意**：请妥善保管 `.env` 文件，不要提交到公开仓库（`.gitignore` 中已包含 `.env`）。
 
 ### 3. 安装 LLBot 框架（Docker 方式）
 
@@ -65,11 +67,9 @@ chmod u+x ./llbot-docker.sh && \
 ```bash
 # 复制所有机器人代码到 llbot-docker 目录（覆盖原有的 docker-compose.yaml）
 cp -r ./* ./llbot-docker/
-# 或者手动将本项目中的 docker-compose.yaml 替换 llbot-docker 目录下的同名文件
 ```
 
-> 此步骤中，本项目的 `docker-compose.yaml` 已经预先配置好了机器人服务与 LLBot 服务的组合。  
-> 如果你没有修改过 compose 文件，直接覆盖即可。
+> **说明**：本项目的 `docker-compose.yaml` 已预先配置好机器人服务与 LLBot 服务的组合。如果你没有修改过 compose 文件，直接覆盖即可。
 
 ### 5. 启动容器
 
@@ -98,8 +98,7 @@ docker-compose logs -f
 ## 🧩 使用说明
 
 - **对话**：直接 @机器人 或私聊它，机器人会以 DeepSeek 回复（角色为 `MAIN_ROLE`）。
-- **塔罗牌**：发送指令（例如 `/tarot` 或 `抽牌`），机器人会随机抽取一张塔罗牌并调用 DeepSeek 按 `TAROT_ROLE` 进行解读。
-- **指令定制**：你可以在代码中修改触发词和塔罗牌库。
+- **塔罗牌**：发送包含`抽牌`意图的指令，机器人会随机抽取一张塔罗牌并调用 DeepSeek 按 `TAROT_ROLE` 进行解读。
 
 ---
 
@@ -119,27 +118,39 @@ docker-compose logs -f
 ### Q4：OneBot Token 在哪里获取？
 - 首次启动 LLBot 后，会在日志中打印出随机生成的 Token，或者你可以自行在 `llbot-docker/config/onebot.yaml` 中设置。
 
+### Q5：机器人如何调用 DeepSeek API？
+- 项目使用 `requests` 库调用 DeepSeek 官方 API，你需要确保容器内能够访问 `api.deepseek.com`。如果网络受限，请配置代理或使用国内中转。
+
 ---
 
-## 📁 项目结构（简要）
+## 📁 项目结构
 
 ```
 QQRobot/
-├── .env                   # 环境变量（不提交）
-├── docker-compose.yaml    # 整合了 robot 与 llbot 服务的编排文件
-├── main.py                # 机器人主程序（需要你自己编写）
-├── tarot.py               # 塔罗牌抽取逻辑
-└── README.md              # 你现在看到的文档
+├── .env                     # 环境变量（不提交）
+├── .gitignore               # Git 忽略文件
+├── docker-compose.yaml      # 整合 robot 与 llbot 服务的编排文件
+├── main.py                  # 机器人主程序
+├── tarot.py                 # 塔罗牌抽取逻辑
+├── requirements.txt         # Python 依赖清单
+└── README.md                # 项目文档
 ```
 
-> **注意**：本仓库中未包含具体的业务代码，请根据 llbot 框架的 API 自行实现 `main.py` 和 `tarot.py`，或参考示例代码。
+### 核心文件说明
+
+- `main.py`：基于 LLBot 的 OneBot v11 协议实现消息收发、调用 DeepSeek API、处理塔罗牌指令。
+- `tarot.py`：包含塔罗牌列表（78 张）和随机抽取函数。
+- `docker-compose.yaml`：定义 `llbot` 和 `robot` 两个服务，并设置网络和卷挂载。
+
+## 📄 许可证
+
+[GPL V3](LICENSE) © 2025 1315318
 
 ---
 
 ## 🙏 致谢
 
-- [LLOneBot / LuckyLilliaBot](https://github.com/LLOneBot/LuckyLilliaBot) – 强大的 QQ 机器人框架
+- [LLOneBot / LuckyLilliaBot](https://github.com/LLOneBot/LuckyLilliaBot) – 强大的 QQ 机器人 Docker 框架
 - [DeepSeek](https://www.deepseek.com/) – 高性价比的大语言模型 API
 
 如果本项目对你有帮助，欢迎 Star ⭐ 或提出 Issue～
-```
