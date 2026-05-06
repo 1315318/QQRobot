@@ -123,28 +123,9 @@ docker-compose logs -f
 
 ---
 
-## 📁 项目结构
-
-```
-QQRobot/
-├── .env                     # 环境变量（不提交）
-├── .gitignore               # Git 忽略文件
-├── docker-compose.yaml      # 整合 robot 与 llbot 服务的编排文件
-├── main.py                  # 机器人主程序
-├── tarot.py                 # 塔罗牌抽取逻辑
-├── requirements.txt         # Python 依赖清单
-└── README.md                # 项目文档
-```
-
-### 核心文件说明
-
-- `main.py`：基于 LLBot 的 OneBot v11 协议实现消息收发、调用 DeepSeek API、处理塔罗牌指令。
-- `tarot.py`：包含塔罗牌列表（78 张）和随机抽取函数。
-- `docker-compose.yaml`：定义 `llbot` 和 `robot` 两个服务，并设置网络和卷挂载。
-
 ## 📄 许可证
 
-[GPL V3](LICENSE) © 2025 1315318
+[GPL V3](LICENSE) © 2026 Bosak
 
 ---
 
@@ -152,5 +133,3 @@ QQRobot/
 
 - [LLOneBot / LuckyLilliaBot](https://github.com/LLOneBot/LuckyLilliaBot) – 强大的 QQ 机器人 Docker 框架
 - [DeepSeek](https://www.deepseek.com/) – 高性价比的大语言模型 API
-
-如果本项目对你有帮助，欢迎 Star ⭐ 或提出 Issue～
