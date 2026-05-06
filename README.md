@@ -138,7 +138,7 @@ QQRobot/
 
 ## 🙏 致谢
 
-- [LLOneBot / LuckyLilliaBot](https://github.com/LLOneBot/LuckyLilliaBot) – 强大的 QQ 机器人 Docker 框架
+- [LLOneBot / LuckyLilliaBot](https://github.com/LLOneBot/LuckyLilliaBot) – 强大的 QQ 机器人框架
 - [DeepSeek](https://www.deepseek.com/) – 高性价比的大语言模型 API
 
 如果本项目对你有帮助，欢迎 Star ⭐ 或提出 Issue～
