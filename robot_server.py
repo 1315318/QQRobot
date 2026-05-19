@@ -7,7 +7,7 @@ class RobotServer:
         self.user_id      = msg_data.get('user_id')
         self.group_id     = msg_data.get('group_id')
         self.group_name   = msg_data.get('group_name')
-        message           = msg_data.get('message')
+        message           = msg_data.get('message') or []
         self.at_judgement = any(m.get('type') == 'at' and m.get('data', {}).get('qq') == f'{Config.ROBOT_QQ}' for m in message)
         self.msg          = "".join(m['data']['text'] for m in message if m['type'] == 'text')
         sender            = msg_data.get('sender')
